@@ -1,0 +1,132 @@
+# Architecture
+User
+ |
+ v
+Diagram Supervisor
+ |
+ +----------------+
+ |                |
+ v                v
+Concept Agent   Layout Agent
+ |                |
+ +-------+--------+
+         |
+         v
+Excalidraw Agent
+         |
+   +-----+------+
+   |            |
+   v            v
+create_view   export
+
+# Repo hierarchy
+
+Excalidraw-mcp-AI-Agent
+|      
+├── excalidraw_agent/
+|     |
+|     ├── chat.py                 # CLI only
+|     │
+|     ├── state.py                # DiagramState
+|     │
+|     ├── graph.py                # LangGraph workflow
+|     |
+|     ├── services/
+|     │   └── llm.py
+|     │
+|     ├── agents/
+|     │   ├── supervisor.py
+|     │   ├── concept.py
+|     │   ├── layout.py
+|     │   └── excalidraw.py
+|     │
+|     ├── mcp/
+|     │   └── excalidraw_client.py
+|     │
+|     ├── prompts/
+|     │   ├── concept.py
+|     │   ├── layout.py
+|     │   └── excalidraw.py
+|     │
+|     └── main.py
+|
+├── excalidraw-mcp/
+├── readme
+└── requirements.txt
+
+# Setting up the Excalidraw MCP server
+```
+cd Excalidraw-mcp-AI-Agent
+git clone https://github.com/excalidraw/excalidraw-mcp.git
+pnpm install & pnpm run build  
+```
+
+Below a simple client:
+
+```{python}
+import asyncio
+
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+from langchain_mcp_adapters.tools import load_mcp_tools
+
+
+async def main():
+
+    # Start Excalidraw MCP server
+    server_params = StdioServerParameters(
+        command="node",
+        args=[
+            "/Users/me/projects/excalidraw-mcp-app/dist/index.js",
+            "--stdio"
+        ],
+    )
+
+    async with stdio_client(server_params) as (read, write):
+
+        async with ClientSession(read, write) as session:
+
+            await session.initialize()
+
+            # Get Excalidraw tools
+            tools = await load_mcp_tools(session)
+
+            print("Available tools:")
+            for t in tools:
+                print(t.name)
+
+
+            llm = ChatOpenAI(
+                model="gpt-4.1"
+            )
+
+
+asyncio.run(main())
+```
+
+# Use the repo
+```
+git clone repo-URL
+cd Excalidraw-mcp-AI-Agent
+```
+
+Set up the MCP server.
+
+Environment setup:
+```
+python -m venv .venv         
+.venv/Scripts/activate
+pip install -r requirements.txt
+```
+
+In a .env file:
+```
+GROQ_API_KEY = ...
+```
+
+# Output
+The Agent returns an excalidraw url where u can visualize your diagram.
+Example Input: draw a diagram explaIning RAG
+CLI Output:
+Diagram Viz:
