@@ -1,15 +1,18 @@
 from typing import Dict, Any
 import json
 import re
+from loguru import logger
 
 from ..prompts.intent import INTENT_SYSTEM_PROMPT
 
 def intent_agent(state: Dict[str, Any], llm) -> Dict[str, Any]:
     """Detects if the user wants to draw a diagram or just ask a question."""
     
-    print("Intent Agent: analyzing user query...")
+    #print("Intent Agent: analyzing user query...")
     
     user_query = state["user_query"]
+
+    logger.info(f"Intent Agent: analyzing user query...")
     
     # Use the LLM service's chat method
     response = llm.chat([
@@ -23,7 +26,8 @@ def intent_agent(state: Dict[str, Any], llm) -> Dict[str, Any]:
         }
     ])
     
-    print(f"Intent Agent response: {response}")
+    #print(f"Intent Agent response: {response}")
+    logger.info(f"Intent Agent response for query: {user_query} is {response}")
     
     # Parse the JSON response
     try:
@@ -55,6 +59,8 @@ def intent_agent(state: Dict[str, Any], llm) -> Dict[str, Any]:
         state["chat_history"] = [
             {"role": "intent_agent", "content": f"Detected: Diagram request. {reason}"}
         ]
+
+    logger.add("./LOGS/logs.log", rotation="500 MB", retention="10 days")
     
     return state
 

@@ -1,4 +1,6 @@
 import json
+from loguru import logger
+
 from ..prompts.components import COMPONENTS_PROMPT
 
 
@@ -7,11 +9,13 @@ def components_agent(
     state,
     llm
 ):
+    concept = state["concept"]
     prompt = COMPONENTS_PROMPT.substitute(
-        concept=state["concept"]
+        concept = concept
     )
 
-    print("Creating Components")
+    #print("Creating Components")
+    logger.info("Creating Components...")
     response = llm.chat(
         [
             {
@@ -21,8 +25,12 @@ def components_agent(
         ]
     )
 
-    print( response)
-    state["components"] = json.loads(response)
+    #print( response)
+    components = json.load(response)
+    state["components"] = components
+
+    logger.info(f"Extracted components for concept: {concept} is: {components}")
+    logger.add("./LOGS/logs.log", rotation="500 MB", retention="10 days")
 
 
     return state

@@ -1,4 +1,6 @@
 import json
+from loguru import logger
+
 from ..prompts.concept import CONCEPT_PROMPT
 
 
@@ -6,11 +8,13 @@ def concept_agent(
     state,
     llm
 ):
+    user_query = state["user_query"]
     prompt = CONCEPT_PROMPT.substitute(
-        user_query = state["user_query"]
+        user_query = user_query
     )
 
-    print("Extracting Concept")
+    #print("Extracting Concept")
+    logger.info("Extracting Concept...")
     response = llm.chat(
         [
             {
@@ -19,8 +23,11 @@ def concept_agent(
             }
         ]
     )
-    print(response)
-    state["concept"] = json.loads(response)
+    #print(response)
+    concept = json.loads(response)
+    state["concept"] = concept
 
+    logger.info(f"Extracted concept for query: {user_query} is: {concept}")
+    logger.add("./LOGS/logs.log", rotation="500 MB", retention="10 days")
 
     return state

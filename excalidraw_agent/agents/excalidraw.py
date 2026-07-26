@@ -162,6 +162,7 @@
 
 import json
 import random
+from loguru import logger
 
 
 def excalidraw_agent(state, llm=None):
@@ -170,7 +171,7 @@ def excalidraw_agent(state, llm=None):
     No LLM needed — pure deterministic construction.
     """
 
-    print("Generating Elements' List...")
+    #print("Generating Elements' List...")
     
     components = state["components"]
     layout = state["layout"]
@@ -437,6 +438,11 @@ def excalidraw_agent(state, llm=None):
         used_ids.add(arrow_id)
     
     state["elements"] = elements
+
+    #logging
+    logger.info(f"Extracted elements for query: {layout} & {design} is: {elements}")
+
+    logger.add("./LOGS/logs.log", rotation="500 MB", retention="10 days")
     
     return state
 
@@ -444,9 +450,7 @@ def excalidraw_agent(state, llm=None):
 def calculate_arrow_between_nodes_fixed(source, target, focus=0):
     """
     Calculate arrow position and points between two nodes.
-    
-    For Excalidraw to properly bind arrows, the arrow's x,y should be at the 
-    approximate center of the arrow's path, and points should be relative to that center.
+    Arrows start and end exactly from the middle of the edges of their parent nodes.
     """
     
     # Calculate centers
@@ -460,33 +464,36 @@ def calculate_arrow_between_nodes_fixed(source, target, focus=0):
     dy = target_center_y - source_center_y
     
     # Determine which edge the arrow should start from and end at
+    # Arrow starts from the middle of the edge of the source node
+    # Arrow ends at the middle of the edge of the target node
+    
     if abs(dx) >= abs(dy):
         # Horizontal dominant
         if dx > 0:
-            # Source RIGHT to Target LEFT
+            # Source RIGHT edge (middle) to Target LEFT edge (middle)
             start_x = source["x"] + source["width"]
-            start_y = source_center_y
+            start_y = source["y"] + source["height"] / 2
             end_x = target["x"]
-            end_y = target_center_y
+            end_y = target["y"] + target["height"] / 2
         else:
-            # Source LEFT to Target RIGHT
+            # Source LEFT edge (middle) to Target RIGHT edge (middle)
             start_x = source["x"]
-            start_y = source_center_y
+            start_y = source["y"] + source["height"] / 2
             end_x = target["x"] + target["width"]
-            end_y = target_center_y
+            end_y = target["y"] + target["height"] / 2
     else:
         # Vertical dominant
         if dy > 0:
-            # Source BOTTOM to Target TOP
-            start_x = source_center_x
+            # Source BOTTOM edge (middle) to Target TOP edge (middle)
+            start_x = source["x"] + source["width"] / 2
             start_y = source["y"] + source["height"]
-            end_x = target_center_x
+            end_x = target["x"] + target["width"] / 2
             end_y = target["y"]
         else:
-            # Source TOP to Target BOTTOM
-            start_x = source_center_x
+            # Source TOP edge (middle) to Target BOTTOM edge (middle)
+            start_x = source["x"] + source["width"] / 2
             start_y = source["y"]
-            end_x = target_center_x
+            end_x = target["x"] + target["width"] / 2
             end_y = target["y"] + target["height"]
     
     # Calculate the midpoint of the arrow path

@@ -1,4 +1,5 @@
 import json
+from loguru import logger
 from ..prompts.design import DESIGN_PROMPT
 
 
@@ -7,11 +8,13 @@ def design_agent(
     state,
     llm
 ):
+    components = state["components"]
     prompt = DESIGN_PROMPT.substitute(
-        components=state["components"],
+        components=components,
     )
 
-    print("Creating Design...")
+    #print("Creating Design...")
+    logger.info("Creating Design...")
     response = llm.chat(
         [
             {
@@ -21,12 +24,17 @@ def design_agent(
         ]
     )
 
-    print(response)
+    #print(response)
     #state["design"] = json.loads(response)
+    design = json.loads(response)
+
+    
+    logger.info(f"Extracted design for components: {components} is: {design}")
+    logger.add("./LOGS/logs.log", rotation="500 MB", retention="10 days")
 
 
     return {
-        "design": json.loads(response),
+        "design": design,
         "chat_history": [{"role": "design_agent", "content": "Design computed"}]  # Note: wrapped in list
 
     }

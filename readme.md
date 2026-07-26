@@ -1,12 +1,6 @@
-# ✏️ Excalidraw AI Agent
-
-An intelligent multi-agent system that generates Excalidraw diagrams from natural language descriptions using LangGraph and MCP.
-
----
-
 # 🏗️ Architecture
 
-The system follows a multi-agent workflow where each agent handles a specific responsibility in the diagram generation pipeline.
+The system follows a multi-agent workflow with Redis caching for fast diagram retrieval.
 
 ```
                     User
@@ -20,28 +14,37 @@ The system follows a multi-agent workflow where each agent handles a specific re
       Diagram Request    General Question
             |                 |
             v                 v
-    Diagram Supervisor    Direct Responder
-            |                 |
-            v                 v
-      Concept Agent      (Return Response)
-            |
-            v
-    Components Agent
-            |
-    +-------+-------+
+    +-------+-------+    Direct Responder
+    |               |         |
+    v               v         v
+Check Redis    Diagram    (Return Response)
+    Cache      Supervisor
     |               |
-    v               v
-Layout Agent    Design Agent
+    |               v
+    |        Concept Agent
     |               |
-    +-------+-------+
-            |
-            v
-    Excalidraw Agent
-            |
-    +-------+-------+
+    |               v
+    |       Components Agent
     |               |
-    v               v
-Create View       Export
+    |       +-------+-------+
+    |       |               |
+    |       v               v
+    |   Layout Agent    Design Agent
+    |       |               |
+    |       +-------+-------+
+    |               |
+    |               v
+    |       Excalidraw Agent
+    |               |
+    |       +-------+-------+
+    |       |               |
+    |       v               v
+    |   Create View       Export
+    |       |               |
+    |       +-------+-------+
+    |               |
+    |               v
+    |       Save to Redis
     |               |
     +-------+-------+
             |
@@ -49,11 +52,22 @@ Create View       Export
         Response
 ```
 
+### Cache Flow Explanation
+
+1. **Intent Detector** → Determines if user wants a diagram
+2. **Check Redis Cache** → For diagram requests, check if the exact query is cached
+   - **Cache HIT** → Skip all agents, directly return cached diagram
+   - **Cache MISS** → Continue through the full diagram pipeline
+3. **Diagram Pipeline** → Full agent workflow to generate new diagram
+4. **Save to Redis** → After successful generation, store the result in Redis cache
+5. **Response** → Return the diagram (cached or newly generated)
+
 ### Agent Responsibilities
 
 | Agent | Responsibility |
 |-------|---------------|
 | **Intent Detector** | Determines if user wants a diagram or is asking a general question |
+| **Redis Cache** | Checks for cached diagrams and stores new ones (30-day TTL) |
 | **Direct Responder** | Handles non-diagram queries with conversational responses |
 | **Supervisor** | Orchestrates the workflow and routes between agents |
 | **Concept Agent** | Determines topic, entities, relationships, and groups from user query |
@@ -72,14 +86,11 @@ Excalidraw-mcp-AI-Agent/
 ├── excalidraw_agent/
 │   ├── chat.py                 # CLI interface with intent handling
 │   ├── state.py                # DiagramState definitions
-│   ├── graph.py                # LangGraph workflow with conditional routing
+│   ├── graph.py                # LangGraph workflow with Redis caching
 │   ├── main.py                 # Entry point
 │   │
 │   ├── services/
 │   │   └── llm.py              # LLM service wrapper (Groq)
-|   |
-│   ├── chat_history/
-│   │   └──  stotage.py
 │   │
 │   ├── agents/
 │   │   ├── intent.py           # Intent detection agent
@@ -90,6 +101,14 @@ Excalidraw-mcp-AI-Agent/
 │   │   ├── layout.py           # Layout calculation
 │   │   ├── design.py           # Design & styling
 │   │   └── excalidraw.py       # Excalidraw generation
+│   │
+│   ├── cache/
+│   │   ├── __init__.py
+│   │   └── diagram_cache.py    # Redis-based caching
+│   │
+│   ├── history/
+│   │   ├── __init__.py
+│   │   └── storage.py          # Chat history storage
 │   │
 │   ├── mcp/
 │   │   └── excalidraw_client.py # MCP client for Excalidraw
@@ -104,9 +123,12 @@ Excalidraw-mcp-AI-Agent/
 │       └── excalidraw.py       # (deprecated)
 │
 ├── excalidraw-mcp/             # Excalidraw MCP server submodule
-├── CHAT_HISTORY/
+├── CHAT_HISTORY/               # Chat history storage
+├── DIAGRAM_CACHE/              # SQLite cache fallback
+├── docker-compose.yml          # Redis Docker setup
 ├── README.md
-└── requirements.txt
+├── requirements.txt
+└── .env
 ```
 
 ---
@@ -120,7 +142,20 @@ git clone <repo-url>
 cd Excalidraw-mcp-AI-Agent
 ```
 
-## 2. Set Up Excalidraw MCP Server
+## 2. Start Redis with Docker (Optional)
+
+```bash
+# Using Docker Compose
+docker compose up -d
+
+# Or with Docker run
+docker run -d --name excalidraw-redis \
+  -p 6379:6379 \
+  -v redis_data:/data \
+  redis:alpine redis-server --appendonly yes
+```
+
+## 3. Set Up Excalidraw MCP Server
 
 ```bash
 cd excalidraw-mcp
@@ -128,7 +163,7 @@ git clone https://github.com/excalidraw/excalidraw-mcp.git .
 pnpm install && pnpm run build
 ```
 
-## 3. Python Environment Setup
+## 4. Python Environment Setup
 
 ```bash
 python -m venv .venv
@@ -136,53 +171,54 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## 4. Environment Variables
+## 5. Environment Variables
 
 Create a `.env` file in the root directory:
 
 ```env
+# LLM
 GROQ_API_KEY=your_groq_api_key_here
+MODEL_NAME=llama-3.1-8b-instant
+
+# Redis Cache (Optional - falls back to SQLite if not set)
+REDIS_URL=redis://localhost:6379/0
+REDIS_TTL=2592000  # 30 days in seconds
+
+# Excalidraw MCP Server Configuration
+EXCALIDRAW_MCP_PATH=path/to/excalidraw-mcp/dist/index.js
+EXCALIDRAW_MCP_COMMAND=node
+EXCALIDRAW_MCP_TRANSPORT=--stdio
 ```
 
 ---
 
-# 💻 Simple MCP Client Example
+# 💻 Docker Compose File
 
-```python
-import asyncio
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
-from langchain_mcp_adapters.tools import load_mcp_tools
+`docker-compose.yml`:
 
-async def main():
-    # Start Excalidraw MCP server
-    server_params = StdioServerParameters(
-        command="node",
-        args=[
-            "/Users/me/projects/excalidraw-mcp-app/dist/index.js",
-            "--stdio"
-        ],
-    )
+```yaml
+version: '3.8'
 
-    async with stdio_client(server_params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            
-            # Get Excalidraw tools
-            tools = await load_mcp_tools(session)
-            
-            print("Available tools:")
-            for t in tools:
-                print(f"  - {t.name}")
+services:
+  redis:
+    image: redis:alpine
+    container_name: excalidraw-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
 
-asyncio.run(main())
+volumes:
+  redis_data:
 ```
 
 ---
 
 # 🎯 Usage Examples
 
-## Diagram Request
+## First Request (Cache MISS)
 
 **Input:**
 ```
@@ -190,12 +226,63 @@ draw a diagram explaining Retrieval Augmented Generation (RAG)
 ```
 
 **CLI Output:**
-![](./assets/Capture%20d'écran%202026-07-26%20103314.png)
+```
+⏳ Processing... (Message #1)
+🔍 Checking Redis cache...
+❌ Cache MISS. Generating new diagram...
 
-**Generated Diagram:**
-![RAG Diagram](./assets/Capture%20d'écran%202026-07-26%20104639.png)
+📐 DIAGRAM GENERATED
+============================================================
+🆕 NEWLY GENERATED
+📝 Topic: Retrieval Augmented Generation (RAG)
+🔹 Entities: Query, Retriever, Knowledge Base, LLM, Response
+🔸 Relationships: 4 identified
+🟦 Nodes: 5
+🔗 Connections: 8
+📊 Flow: Sequential with retrieval
+🎨 Shapes: 5 assigned
+📦 Total Elements: 23
+------------------------------------------------------------
+🔗 VIEW YOUR DIAGRAM:
+   https://excalidraw.com/room#xyz789
+============================================================
+💾 Saving to Redis cache...
+✅ Cached successfully in Redis!
+💾 Auto-saved to: CHAT_HISTORY/chat_history_20260115_143000.json
+```
 
-## General Question
+**Excalidraw Diagram**
+![](./assets/Capture%20d'écran%202026-07-26%20104639.png)
+
+## Same Request Again (Cache HIT)
+
+**Input:**
+```
+draw a diagram explaining Retrieval Augmented Generation (RAG)
+```
+
+**CLI Output:**
+```
+⏳ Processing... (Message #2)
+🔍 Checking Redis cache...
+✅ Cache HIT! Returning cached diagram.
+
+📐 DIAGRAM GENERATED
+============================================================
+⚡ FROM REDIS CACHE (Fast retrieval)
+📌 Original query: draw a diagram explaining Retrieval Augmented Generation (RAG)
+📝 Topic: Retrieval Augmented Generation (RAG)
+🟦 Nodes: 5
+🔗 Connections: 8
+📦 Total Elements: 23
+------------------------------------------------------------
+🔗 VIEW YOUR DIAGRAM:
+   https://excalidraw.com/room#xyz789
+============================================================
+💾 Auto-saved to: CHAT_HISTORY/chat_history_20260115_144500.json
+```
+
+## General Question (No Cache)
 
 **Input:**
 ```
@@ -204,7 +291,8 @@ What is Retrieval Augmented Generation?
 
 **CLI Output:**
 ```
-🤖 ASSISTANT
+⏳ Processing... (Message #3)
+🤖 Assistant:
 ============================================================
 Retrieval Augmented Generation (RAG) is an AI framework that 
 combines information retrieval with language generation. 
@@ -219,146 +307,173 @@ to up-to-date information.
 
 💡 Tip: I can draw a diagram of the RAG architecture if you'd like!
 ============================================================
+💾 Auto-saved to: CHAT_HISTORY/chat_history_20260115_145000.json
 ```
 
 ---
 
-# 📋 Excalidraw Element Schema
+# 🔄 Graph Flow with Redis Cache
 
-### Required Fields (All Elements)
-- `type`: Element type (rectangle, ellipse, diamond, arrow, text)
-- `id`: Unique identifier
-- `x`: X-coordinate position
-- `y`: Y-coordinate position
-
-### Shape Elements (Rectangle/Ellipse/Diamond)
-```json
-{
-  "type": "rectangle",
-  "id": "node_1",
-  "x": 100,
-  "y": 200,
-  "width": 200,
-  "height": 100,
-  "backgroundColor": "#4a90e2",
-  "fillStyle": "solid",
-  "strokeColor": "#2c3e50",
-  "strokeWidth": 2,
-  "roundness": {"type": 3},
-  "boundElements": [{"id": "text_1", "type": "text"}]
-}
-```
-
-### Text Elements (Inside Nodes)
-```json
-{
-  "type": "text",
-  "id": "text_1",
-  "containerId": "node_1",
-  "x": 120,
-  "y": 235,
-  "text": "Node Label",
-  "textAlign": "center",
-  "verticalAlign": "middle",
-  "fontSize": 16,
-  "fontFamily": 1
-}
-```
-- Position text centered within parent: `x = parent.x + 20`, `y = parent.y + parent.height/2 - 15`
-- Width should be `parent.width - 40`
-
-### Arrow Elements
-```json
-{
-  "type": "arrow",
-  "id": "arrow_1",
-  "x": 200,
-  "y": 250,
-  "points": [[0, 0], [100, 0]],
-  "strokeColor": "#2c3e50",
-  "strokeWidth": 2,
-  "startBinding": {
-    "elementId": "node_1",
-    "focus": 0,
-    "gap": 5
-  },
-  "endBinding": {
-    "elementId": "node_2",
-    "focus": 0.2,
-    "gap": 5
-  }
-}
-```
-- For bidirectional arrows, use `focus` offset (e.g., -0.2 and 0.2) to prevent overlap
-
-### Text Labels (Standalone)
-```json
-{
-  "type": "text",
-  "id": "label_1",
-  "x": 400,
-  "y": 300,
-  "text": "Standalone Text",
-  "fontSize": 14,
-  "fontFamily": 1,
-  "textAlign": "center"
-}
-```
-
-### Styling Rules
-- `fillStyle`: `"solid"` for colored nodes, `"transparent"` for frames
-- IDs must be unique across ALL elements
-
----
-
-# 🔄 Graph Flow with Intent Detection
-
-The graphincludes intelligent routing based on user intent:
+The graph includes intelligent caching for diagram requests:
 
 ```python
-# Conditional routing from intent agent
-def route_based_on_intent(state: Dict[str, Any]) -> str:
-    if state.get("is_diagram_request", False):
-        return "diagram_pipeline"
-    else:
-        return "direct_response"
+# Conditional routing with cache
+async def check_cache(state):
+    """Check Redis cache before generating."""
+    cached = await cache.get_cached_result(state["user_query"])
+    if cached:
+        state["elements"] = cached["elements"]
+        state["export_url"] = cached["export_url"]
+        state["is_cached"] = True
+    return state
+
+def route_after_cache(state):
+    if state.get("is_cached", False):
+        return "render_directly"  # Skip all agents
+    return "generate_diagram"     # Full pipeline
 ```
 
-### Diagram Pipeline Flow
-1. **Intent Detection** → Identifies if user wants a diagram
-2. **Diagram Supervisor** → Orchestrates the diagram creation
-3. **Concept Agent** → Extracts concepts from the query
-4. **Components Agent** → Identifies nodes and connections
-5. **Parallel Processing**:
-   - Layout Agent → Calculates positions
-   - Design Agent → Assigns shapes and styles
-6. **Excalidraw Agent** → Generates the diagram
-7. **Render & Export** → Creates viewable URL
+### Cache Flow Diagram
 
-### General Question Flow
-1. **Intent Detection** → Identifies non-diagram query
-2. **Direct Responder** → Answers the question conversationally
+```
++------------------+
+|   User Request   |
++------------------+
+         |
+         v
++------------------+
+|  Intent Detector |
++------------------+
+         |
+    +----+----+
+    |         |
+    v         v
++---------+ +------------------+
+| Diagram | | General Question |
+| Request | +------------------+
++---------+          |
+    |                v
+    v         +-------------+
++-----------+ | Direct      |
+| Check     | | Responder   |
+| Redis     | +-------------+
+| Cache     |       |
++-----------+       v
+    |        +-------------+
+    |        |   Response  |
++---+---+    +-------------+
+|   |   |
+v   v   v
++-----------+  +----------------+
+| Cache HIT |  | Cache MISS     |
+| (Skip     |  | (Full Pipeline)|
+| Pipeline) |  +----------------+
++-----------+          |
+    |                 v
+    |         +---------------+
+    |         | Diagram       |
+    |         | Supervisor    |
+    |         +---------------+
+    |                 |
+    |                 v
+    |         +---------------+
+    |         | Concept Agent |
+    |         +---------------+
+    |                 |
+    |                 v
+    |         +---------------+
+    |         | Components    |
+    |         | Agent         |
+    |         +---------------+
+    |                 |
+    |         +-------+-------+
+    |         |               |
+    |         v               v
+    |   +---------+     +---------+
+    |   | Layout  |     | Design  |
+    |   | Agent   |     | Agent   |
+    |   +---------+     +---------+
+    |         |               |
+    |         +-------+-------+
+    |                 |
+    |                 v
+    |         +---------------+
+    |         | Excalidraw    |
+    |         | Agent         |
+    |         +---------------+
+    |                 |
+    |         +-------+-------+
+    |         |               |
+    |         v               v
+    |   +---------+     +---------+
+    |   | Create  |     | Export  |
+    |   | View    |     |         |
+    |   +---------+     +---------+
+    |         |               |
+    |         +-------+-------+
+    |                 |
+    |                 v
+    |         +---------------+
+    |         | Save to       |
+    |         | Redis Cache   |
+    |         +---------------+
+    |                 |
+    +-------+---------+
+            |
+            v
+    +-------------+
+    |   Response  |
+    | (with URL)  |
+    +-------------+
+```
 
 ---
 
-# 📝 Development Roadmap
+# 💾 Redis Cache Implementation
+
+## Cache Features
+
+- **Automatic TTL**: 30-day expiration
+- **Fallback**: SQLite cache if Redis is unavailable
+- **Async Support**: Non-blocking operations
+- **Connection Pooling**: Efficient Redis connections
+- **Key Management**: SHA256 hashing for query keys
+
+## Cache Statistics
+
+```python
+# View cache stats
+await cache.get_stats()
+```
+
+Output:
+```json
+{
+  "total_entries": 15,
+  "cache_type": "Redis",
+  "redis_url": "redis://localhost:6379/0",
+  "fallback_to_memory": true,
+  "ttl_seconds": 2592000,
+  "ttl_days": 30,
+  "status": "connected"
+}
+```
+
+---
+
+# 📋 Development Roadmap
 
 - [x] Create all agents (Intent, Responder, Supervisor, Concept, Components, Layout, Design, Excalidraw)
-- [x] Implement intent detection and conditional routing
-- [x] Add conversational response capability
+- [x] Implement Redis caching
+- [x] Add SQLite fallback
+- [x] Add chat history storage
 - [ ] Add agent-level unit tests
-- [x] Add chat history file logging
-- [ ] Implement caching for LLM responses
-- [ ] Supervisor intent detection with routing
 - [ ] Human-in-the-loop interaction
 - [ ] Checkpointing for diagram modification
 - [ ] Comprehensive logging system
-- [ ] Web interface (Streamlit/Gradio)
-- [ ] Diagram editing and refinement
 
 ---
 
 # 📄 License
 
-This project is licensed under the MIT License 
-
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

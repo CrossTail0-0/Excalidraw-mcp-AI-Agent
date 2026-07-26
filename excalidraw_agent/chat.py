@@ -1,5 +1,5 @@
 import asyncio
-from .chat_history.storage import ChatHistoryStorage
+from .history.storage import ChatHistoryStorage
 
 class Chatbot:
     def __init__(self, graph, read_me, storage_dir: str = "CHAT_HISTORY"):

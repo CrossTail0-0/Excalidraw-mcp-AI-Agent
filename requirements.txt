@@ -4,3 +4,4 @@ dotenv
 langchain-mcp-adapters 
 mcp
 aiofiles
+redis

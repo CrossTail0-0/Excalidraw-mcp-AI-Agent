@@ -8,3 +8,6 @@ excalidraw_agent/services/__pycache__/
 excalidraw-mcp/
 test.py
 CHAT_HISTORY/
+CACHE_HISTORY/
+LOGS/
+__pycache__/
