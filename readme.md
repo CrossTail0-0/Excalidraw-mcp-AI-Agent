@@ -77,6 +77,9 @@ Excalidraw-mcp-AI-Agent/
 │   │
 │   ├── services/
 │   │   └── llm.py              # LLM service wrapper (Groq)
+|   |
+│   ├── chat_history/
+│   │   └──  stotage.py
 │   │
 │   ├── agents/
 │   │   ├── intent.py           # Intent detection agent
@@ -101,6 +104,7 @@ Excalidraw-mcp-AI-Agent/
 │       └── excalidraw.py       # (deprecated)
 │
 ├── excalidraw-mcp/             # Excalidraw MCP server submodule
+├── CHAT_HISTORY/
 ├── README.md
 └── requirements.txt
 ```
@@ -186,22 +190,7 @@ draw a diagram explaining Retrieval Augmented Generation (RAG)
 ```
 
 **CLI Output:**
-```
-📐 DIAGRAM GENERATED
-============================================================
-📝 Topic: Retrieval Augmented Generation (RAG)
-🔹 Entities: Query, Retriever, Knowledge Base, LLM, Response
-🔸 Relationships: 4 identified
-🟦 Nodes: 5
-🔗 Connections: 8
-📊 Flow: Sequential with retrieval
-🎨 Shapes: 5 assigned
-📦 Total Elements: 23
-============================================================
-🔗 VIEW YOUR DIAGRAM:
-   https://excalidraw.com/room#xyz789
-============================================================
-```
+![](./assets/Capture%20d'écran%202026-07-26%20103314.png)
 
 **Generated Diagram:**
 ![RAG Diagram](./assets/Capture%20d'écran%202026-07-26%20104639.png)
@@ -324,7 +313,7 @@ to up-to-date information.
 
 # 🔄 Graph Flow with Intent Detection
 
-The graph now includes intelligent routing based on user intent:
+The graphincludes intelligent routing based on user intent:
 
 ```python
 # Conditional routing from intent agent
@@ -369,63 +358,7 @@ def route_based_on_intent(state: Dict[str, Any]) -> str:
 
 ---
 
-# 🔧 Architecture Changes
-
-The system now features an enhanced agent pipeline with intent detection:
-
-1. **Intent Detector** → Determines if user wants a diagram or general information
-2. **Direct Responder** → Handles non-diagram queries conversationally
-3. **Diagram Pipeline** → Only triggered when a diagram is requested:
-   - **Supervisor Agent** → Orchestrates the entire workflow
-   - **Concept Agent** → Analyzes query and extracts key concepts
-   - **Components Agent** → Identifies nodes and relationships
-   - **Parallel Processing**:
-     - **Layout Agent** → Determines flow and positions
-     - **Design Agent** → Assigns shapes and styles
-   - **Excalidraw Agent** → Assembles final diagram elements
-
-### Key Benefits
-- ✅ **Intelligent Routing** - Automatically detects if user wants a diagram
-- ✅ **Conversational AI** - Answers general questions without generating diagrams
-- ✅ **Efficient Processing** - Skips diagram pipeline for non-diagram queries
-- ✅ **Better UX** - Provides relevant responses based on user intent
-- ✅ **Cost Optimization** - Reduces unnecessary LLM calls
-
----
-
-# 🤝 Contributing
-
-Contributions are welcome! Please read our contributing guidelines before submitting a pull request.
-
-## Development Setup
-
-```bash
-# Install development dependencies
-pip install -r requirements-dev.txt
-
-# Run tests
-pytest tests/
-
-# Format code
-black .
-isort .
-
-# Lint code
-flake8 .
-mypy .
-```
-
----
-
 # 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License 
 
----
-
-# 🙏 Acknowledgments
-
-- [Excalidraw](https://excalidraw.com/) for the amazing diagramming tool
-- [LangChain](https://langchain.com/) for the LangGraph framework
-- [MCP](https://modelcontextprotocol.io/) for the Model Context Protocol
-- [Groq](https://groq.com/) for the fast LLM inference
