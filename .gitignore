@@ -6,3 +6,4 @@ excalidraw_agent/prompts/__pycache__/
 excalidraw_agent/mcp/__pycache__/
 excalidraw_agent/services/__pycache__/
 excalidraw-mcp/
+test.py

@@ -1,10 +1,11 @@
-from typing import TypedDict, List, Dict, Any, Optional
+from typing import Annotated, TypedDict, List, Dict, Any, Optional
+import operator
 
 
 class DiagramState(TypedDict):
 
     # conversation
-    chat_history: List[Dict[str, str]]
+    chat_history: Annotated[List[Dict[str, Any]], operator.add]
 
     # user input
     user_query: str
@@ -13,9 +14,15 @@ class DiagramState(TypedDict):
     # concept agent result
     concept: Dict[str, Any]
 
+    # components
+    components: Dict[str, Any]
+
 
     # layout agent result
-    layout_plan: Dict[str, Any]
+    layout: Dict[str, Any]
+
+    # geometry
+    design: Dict[str, Any]
 
 
     # generated excalidraw elements

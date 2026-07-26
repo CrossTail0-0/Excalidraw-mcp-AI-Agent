@@ -4,6 +4,8 @@ from .state import DiagramState
 
 from .agents.supervisor import supervisor
 from .agents.concept import concept_agent
+from .agents.components import components_agent
+from .agents.design import design_agent
 from .agents.layout import layout_agent
 from .agents.excalidraw import excalidraw_agent
 
@@ -36,6 +38,16 @@ def build_graph(
         )
     )
 
+    workflow.add_node(
+        "components",
+
+        lambda state:
+        components_agent(
+            state,
+            llm
+        )
+    )
+    
 
     workflow.add_node(
         "layout",
@@ -47,14 +59,22 @@ def build_graph(
         )
     )
 
+    workflow.add_node(
+        "design",
+
+        lambda state:
+        design_agent(
+            state,
+            llm
+        )
+    )
 
     workflow.add_node(
         "excalidraw",
 
         lambda state:
         excalidraw_agent(
-            state,
-            llm
+            state
         )
     )
 
@@ -78,39 +98,20 @@ def build_graph(
 
 
 
-    workflow.add_node(
-        "render",
-        render
-    )
+    workflow.add_node("render", render)
 
 
-    workflow.set_entry_point(
-        "supervisor"
-    )
+    workflow.set_entry_point("supervisor")
+    workflow.add_edge("supervisor", "concept")
+    workflow.add_edge("concept", "components")
 
+    workflow.add_edge("components", "layout")
+    workflow.add_edge("components", "design")
 
-    workflow.add_edge(
-        "supervisor",
-        "concept"
-    )
+    workflow.add_edge( "layout", "excalidraw")
+    workflow.add_edge( "design", "excalidraw")
 
-
-    workflow.add_edge(
-        "concept",
-        "layout"
-    )
-
-
-    workflow.add_edge(
-        "layout",
-        "excalidraw"
-    )
-
-
-    workflow.add_edge(
-        "excalidraw",
-        "render"
-    )
+    workflow.add_edge("excalidraw", "render")
 
 
     workflow.add_edge(

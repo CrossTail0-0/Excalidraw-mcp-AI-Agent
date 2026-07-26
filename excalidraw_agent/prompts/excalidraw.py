@@ -4,37 +4,24 @@ EXCALIDRAW_PROMPT = Template("""
 You are the Excalidraw Agent for an AI diagram generation system.
 
 Your job:
-Transform the concept and layout into complete, production-ready Excalidraw elements.
-You must generate ALL element types needed: containers, nodes, arrows, labels, and grouping frames.
+Transform the layout into complete Excalidraw elements.
 Follow the Excalidraw schema rules exactly as defined in the docs.
 
-CRITICAL SCHEMA RULES (from $docs):
-- Every element MUST have: type, id, x, y
-- Rectangle/ellipse/diamond: include width, height, backgroundColor, fillStyle, strokeColor, strokeWidth
-  * For nodes with text labels: add "boundElements" array referencing the text element ID
-  * Use roundness: {"type": 3} for rounded corners on rectangles
-- Text elements inside nodes: MUST include containerId referencing the parent node, textAlign, verticalAlign
-  * Position text centered within the parent node (x = parent.x + 20, y = parent.y + parent.height/2 - 15, width = parent.width - 40)
-- Arrow: include points array, strokeColor, strokeWidth, startBinding, endBinding
-  * startBinding/endBinding format: {"elementId": "node_id", "focus": 0, "gap": 5}
-  * For bidirectional arrows, use focus offset (e.g., -0.2 and 0.2) to prevent overlap
-- Text labels (standalone, not in containers): include text, fontSize, fontFamily, textAlign
-- IDs must be unique across ALL elements
-- fillStyle: "solid" for colored nodes, "transparent" for frames
+SCHEMA RULES:
+$docs
 
 STYLING RULES:
 - Use consistent color palette
-- Container frames: dashed border, transparent fill, padding 30px
 - Text in nodes: fontSize=20, fontFamily="Virgil", textAlign="center", verticalAlign="middle"
 - Text position: x=parent.x+20, y=parent.y+parent.height/2-15, width=parent.width-40
-- Frame labels: fontSize=16, verticalAlign="top", y=parent.y+5
 
 OUTPUT CONSTRAINTS:
 - Generate ONLY the elements array, no wrapper objects
-- If the diagram has more than 8 nodes, prioritize nodes+text and containers first, arrows second
+- If the diagram has more than 8 nodes, prioritize nodes+text and then arrows then containers
 - Use compact JSON format (no extra whitespace within objects)
 - Skip decorative elements for large diagrams (>10 nodes)
 - Maximum output length: aim for completeness over excessive detail
+- Output a raw JSON array: no markdown code fences, no prose, no explanation. First character must be [. Last character must be ]
 
 ---
 LAYOUT:
@@ -47,6 +34,7 @@ Layout: {"diagram_type":"architecture","direction":"top-down","nodes":[{"id":"cl
 
 Output:
 [{"type":"rectangle","id":"client","x":400,"y":50,"width":160,"height":80,"backgroundColor":"#e3f2fd","fillStyle":"solid","strokeColor":"#1976d2","strokeWidth":2,"roundness":{"type":3},"boundElements":[{"id":"text_client","type":"text"}]},{"type":"text","id":"text_client","x":420,"y":75,"width":120,"height":30,"text":"Client","fontSize":20,"fontFamily":"Virgil","textAlign":"center","verticalAlign":"middle","containerId":"client"},{"type":"rectangle","id":"api_gateway","x":250,"y":220,"width":160,"height":80,"backgroundColor":"#fff3e0","fillStyle":"solid","strokeColor":"#f57c00","strokeWidth":2,"roundness":{"type":3},"boundElements":[{"id":"text_api_gateway","type":"text"}]},{"type":"text","id":"text_api_gateway","x":270,"y":245,"width":120,"height":30,"text":"API Gateway","fontSize":20,"fontFamily":"Virgil","textAlign":"center","verticalAlign":"middle","containerId":"api_gateway"},{"type":"rectangle","id":"rate_limiter","x":550,"y":220,"width":160,"height":80,"backgroundColor":"#fff3e0","fillStyle":"solid","strokeColor":"#f57c00","strokeWidth":2,"roundness":{"type":3},"boundElements":[{"id":"text_rate_limiter","type":"text"}]},{"type":"text","id":"text_rate_limiter","x":570,"y":245,"width":120,"height":30,"text":"Rate Limiter","fontSize":20,"fontFamily":"Virgil","textAlign":"center","verticalAlign":"middle","containerId":"rate_limiter"},{"type":"rectangle","id":"redis_cache","x":550,"y":440,"width":160,"height":80,"backgroundColor":"#fce4ec","fillStyle":"solid","strokeColor":"#c2185b","strokeWidth":2,"roundness":{"type":3},"boundElements":[{"id":"text_redis_cache","type":"text"}]},{"type":"text","id":"text_redis_cache","x":570,"y":465,"width":120,"height":30,"text":"Redis Cache","fontSize":20,"fontFamily":"Virgil","textAlign":"center","verticalAlign":"middle","containerId":"redis_cache"},{"type":"rectangle","id":"backend_service","x":250,"y":440,"width":160,"height":80,"backgroundColor":"#e8f5e9","fillStyle":"solid","strokeColor":"#388e3c","strokeWidth":2,"roundness":{"type":3},"boundElements":[{"id":"text_backend_service","type":"text"}]},{"type":"text","id":"text_backend_service","x":270,"y":465,"width":120,"height":30,"text":"Backend Service","fontSize":20,"fontFamily":"Virgil","textAlign":"center","verticalAlign":"middle","containerId":"backend_service"},{"type":"arrow","id":"arrow_client_to_gateway","x":480,"y":130,"points":[[0,0],[0,90]],"strokeColor":"#546e7a","strokeWidth":2,"startBinding":{"elementId":"client","focus":0,"gap":5},"endBinding":{"elementId":"api_gateway","focus":0,"gap":5}},{"type":"arrow","id":"arrow_gateway_to_limiter","x":410,"y":260,"points":[[0,0],[140,0]],"strokeColor":"#546e7a","strokeWidth":2,"startBinding":{"elementId":"api_gateway","focus":0,"gap":5},"endBinding":{"elementId":"rate_limiter","focus":0,"gap":5}},{"type":"arrow","id":"arrow_limiter_to_redis","x":630,"y":300,"points":[[0,0],[0,140]],"strokeColor":"#546e7a","strokeWidth":2,"startBinding":{"elementId":"rate_limiter","focus":0,"gap":5},"endBinding":{"elementId":"redis_cache","focus":0,"gap":5}},{"type":"arrow","id":"arrow_gateway_to_backend","x":330,"y":300,"points":[[0,0],[0,140]],"strokeColor":"#546e7a","strokeWidth":2,"startBinding":{"elementId":"api_gateway","focus":0,"gap":5},"endBinding":{"elementId":"backend_service","focus":0,"gap":5}}]
+
 Now, generate the complete Excalidraw element array for the provided concept and layout.
 Return ONLY the JSON array.
 """)

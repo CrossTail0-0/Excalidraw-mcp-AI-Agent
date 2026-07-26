@@ -7,12 +7,11 @@ def layout_agent(
     state,
     llm
 ):
-    #print("Concept:", state["concept"])
     prompt = LAYOUT_PROMPT.substitute(
-        concept=state["concept"]
+        components=state["components"]
     )
 
-
+    print("Creating Layout...")
     response = llm.chat(
         [
             {
@@ -22,8 +21,13 @@ def layout_agent(
         ]
     )
 
-    #print("Layout Agent Response:", response)
-    state["layout_plan"] = json.loads(response)
+    print(response)
+    state["layout"] = json.loads(response)
 
 
-    return state
+
+    return {
+        "layout": json.loads(response),
+        "chat_history": [{"role": "layout_agent", "content": "Layout computed"}]  # Note: wrapped in list
+
+    }

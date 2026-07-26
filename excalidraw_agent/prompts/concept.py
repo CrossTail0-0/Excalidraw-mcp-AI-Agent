@@ -1,4 +1,6 @@
-CONCEPT_PROMPT = """
+from string import Template
+
+CONCEPT_PROMPT = Template("""
 You are the Concept Agent for an AI diagram generation system.
 
 Your job:
@@ -22,7 +24,7 @@ ONLY return valid JSON. No markdown, no explanation, no code blocks.
 
 ---
 
-EXAMPLE 1 — Simple System Explanation
+EXAMPLE 1 
 User: "Explain how rate limiting works in an API"
 
 Output:
@@ -56,7 +58,7 @@ Output:
 
 ---
 
-EXAMPLE 2 — Process/Workflow
+EXAMPLE 2 
 User: "Draw a user authentication flow with OAuth"
 
 Output:
@@ -92,84 +94,8 @@ Output:
 }
 
 ---
-
-EXAMPLE 3 — System Architecture (Complex)
-User: "Architecture diagram for a real-time chat application with microservices"
-
-Output:
-{
-  "topic": "Real-time Chat Microservices Architecture",
-  "purpose": "show system architecture for scalable chat application",
-  "entities": [
-    "Mobile App",
-    "Web App",
-    "Load Balancer",
-    "API Gateway",
-    "Auth Service",
-    "Chat Service",
-    "Message Broker (Kafka)",
-    "Notification Service",
-    "Presence Service",
-    "WebSocket Manager",
-    "Message Database (MongoDB)",
-    "User Database (PostgreSQL)",
-    "Cache (Redis)",
-    "CDN",
-    "Push Notification Provider (FCM/APNs)"
-  ],
-  "relationships": [
-    "Mobile App → Load Balancer: HTTPS requests",
-    "Web App → Load Balancer: HTTPS requests",
-    "Load Balancer → API Gateway: routes traffic",
-    "API Gateway → Auth Service: validates JWT",
-    "Auth Service → User Database (PostgreSQL): queries user data",
-    "API Gateway → Chat Service: routes chat requests",
-    "Chat Service → Message Broker (Kafka): publishes messages",
-    "Message Broker (Kafka) → Notification Service: consumes messages",
-    "Message Broker (Kafka) → Presence Service: consumes status events",
-    "Chat Service → Message Database (MongoDB): persists messages",
-    "Chat Service → Cache (Redis): caches recent messages",
-    "Notification Service → Push Notification Provider (FCM/APNs): sends push",
-    "WebSocket Manager → Chat Service: manages connections",
-    "WebSocket Manager → Mobile App: real-time updates",
-    "WebSocket Manager → Web App: real-time updates",
-    "CDN → Mobile App: serves static assets",
-    "CDN → Web App: serves static assets"
-  ],
-  "groups": [
-    {"name": "Clients", "entities": ["Mobile App", "Web App"]},
-    {"name": "Edge Layer", "entities": ["Load Balancer", "API Gateway", "CDN"]},
-    {"name": "Core Services", "entities": ["Auth Service", "Chat Service", "WebSocket Manager"]},
-    {"name": "Supporting Services", "entities": ["Notification Service", "Presence Service"]},
-    {"name": "Messaging & Data", "entities": ["Message Broker (Kafka)", "Message Database (MongoDB)", "User Database (PostgreSQL)", "Cache (Redis)"]},
-    {"name": "External Services", "entities": ["Push Notification Provider (FCM/APNs)"]}
-  ]
-}
-
----
-
-EXAMPLE 4 — Simple Diagram (Minimal)
-User: "Show me a basic client-server model"
-
-Output:
-{
-  "topic": "Client-Server Model",
-  "purpose": "illustrate basic client-server architecture",
-  "entities": [
-    "Client",
-    "Server",
-    "Database"
-  ],
-  "relationships": [
-    "Client → Server: sends request",
-    "Server → Database: queries data",
-    "Database → Server: returns data",
-    "Server → Client: sends response"
-  ],
-  "groups": []
-}
-
----
+USER REQUEST:
+$user_query
 
 Now, analyze the user's request and return ONLY the JSON.
-"""
+""")

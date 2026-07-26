@@ -33,21 +33,15 @@ class Chatbot:
             state={
 
                 "chat_history":[],
-
                 "user_query":query,
-
                 "concept":{},
-
-                "layout_plan":{},
-
+                "components":{},
+                "layout":{},
+                "design":{},
                 "elements":[],
-
                 "checkpoint_id":None,
-
                 "export_url":None,
-
                 "excalidraw_docs":self.read_me
-
             }
 
 
@@ -57,10 +51,11 @@ class Chatbot:
 
 
             print(
-                "\nDiagram:"
-            )
+                    "\nDiagram:"
+                )
 
 
             print(
-                result["export_url"]
-            )
+                    result["export_url"]
+                )
+

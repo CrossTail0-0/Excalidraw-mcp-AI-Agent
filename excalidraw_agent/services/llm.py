@@ -7,7 +7,7 @@ class LLMService:
     def __init__(
         self,
         api_key: str,
-        model="openai/gpt-oss-120b"
+        model="llama-3.1-8b-instant" #"openai/gpt-oss-120b"
     ):
 
         self.client = Groq(
@@ -23,17 +23,20 @@ class LLMService:
         messages,
         temperature=0
     ):
+        
 
-        response = self.client.chat.completions.create(
+        try: 
+            response = self.client.chat.completions.create(
 
-            model=self.model,
+                model=self.model,
 
-            messages=messages,
+                messages=messages,
 
-            temperature=temperature,
+                temperature=temperature,
 
-            max_completion_tokens=4096
-        )
-
-
-        return response.choices[0].message.content
+                max_completion_tokens=4096
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            # llm answers instead with the error
+            raise ValueError(e)
